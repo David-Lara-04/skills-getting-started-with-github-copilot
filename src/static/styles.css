@@ -88,6 +88,7 @@ section h3 {
 
 .participants-list {
   margin-left: 0;
+  padding-left: 0;
   list-style: none;
   font-size: 14px;
   color: #555;
@@ -98,6 +99,10 @@ section h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.participant-email {
+  word-break: break-word;
 }
 
 .participants-list em {

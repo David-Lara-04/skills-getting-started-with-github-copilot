@@ -7,11 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
-      const response = await fetch("/activities");
+      // Avoid cached responses and force fresh data from the server
+      const response = await fetch(`/activities?_ts=${Date.now()}`, { cache: 'no-store' });
       const activities = await response.json();
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      // Reset activity select to avoid duplicated options when re-fetching
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -21,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft = details.max_participants - details.participants.length;
 
         const participantsList = details.participants.length > 0
-          ? details.participants.map(p => `<li><span>${p}</span><button class="delete-btn" data-activity="${name}" data-email="${p}" title="Unregister">✕</button></li>`).join('')
+          ? details.participants.map(p => `<li><span class="participant-email">${p}</span><button type="button" class="delete-btn" data-activity="${name}" data-email="${p}" title="Unregister" aria-label="Unregister ${p}">🗑️</button></li>`).join('')
           : '<li><em>No participants yet</em></li>';
 
         activityCard.innerHTML = `
