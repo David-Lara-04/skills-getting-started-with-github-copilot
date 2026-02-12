@@ -7,11 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
-      const response = await fetch("/activities");
+      // Avoid cached responses and force fresh data from the server
+      const response = await fetch(`/activities?_ts=${Date.now()}`, { cache: 'no-store' });
       const activities = await response.json();
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      // Reset activity select to avoid duplicated options when re-fetching
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -20,12 +23,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        const participantsList = details.participants.length > 0
+          ? details.participants.map(p => `<li><span class="participant-email">${p}</span><button type="button" class="delete-btn" data-activity="${name}" data-email="${p}" title="Unregister" aria-label="Unregister ${p}">🗑️</button></li>`).join('')
+          : '<li><em>No participants yet</em></li>';
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <h5>Participants</h5>
+            <ul class="participants-list">
+              ${participantsList}
+            </ul>
+          </div>
         `;
+
+        // Add event listeners to delete buttons
+        activityCard.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const activityName = btn.dataset.activity;
+            const emailToRemove = btn.dataset.email;
+            
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(emailToRemove)}`,
+                { method: 'POST' }
+              );
+              
+              if (response.ok) {
+                // Refresh activities after successful deletion
+                fetchActivities();
+              } else {
+                const error = await response.json();
+                alert(`Error: ${error.detail || 'Failed to unregister'}`);
+              }
+            } catch (error) {
+              console.error('Error unregistering:', error);
+              alert('Failed to unregister participant');
+            }
+          });
+        });
 
         activitiesList.appendChild(activityCard);
 
@@ -62,6 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Refresh activities after successful signup
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
